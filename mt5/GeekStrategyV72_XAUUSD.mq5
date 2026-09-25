@@ -26,8 +26,7 @@
 //+------------------------------------------------------------------+
 #property copyright   "GeekStrategy"
 #property version     "7.20"
-#property description "GeekStrategy V7.2 - motor ALMA+MAD adaptativo. Solo XAUUSD."
-#property description "Distancias en $ de precio del oro. Parametros calibrados para M15."
+#property description "GeekStrategy V7.2 - motor ALMA MAD adaptativo - solo XAUUSD M15"
 
 #include <Trade\Trade.mqh>
 

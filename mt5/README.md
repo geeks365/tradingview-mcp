@@ -89,11 +89,20 @@ Por defecto vienen neutras: con los valores de fábrica el EA se comporta como a
 | Operar solo en una franja horaria | false | Solo abre trades entre `desde` y `hasta` (hora del servidor; admite cruzar la medianoche) |
 | Activar trailing tras N R de ganancia | 1.0 | Si enciendes el trailing, espera a que el trade lleve N R a favor |
 
-## Optimización con el archivo .set
+## Archivos .set
 
-`GeekV72_optimizacion.set` trae ya marcados los parámetros del motor para optimizar
-(Multiplicador Min/Max, Longitud Vol, Rank mínimo y Velas de confirmación).
-En el Probador: pestaña *Parámetros* → clic derecho → **Cargar** → elige el `.set`.
+El Probador recuerda los últimos parámetros usados. Carga siempre un `.set`
+para no arrastrar valores de una prueba anterior (pestaña *Parámetros* →
+clic derecho → **Cargar**).
+
+| Archivo | Para qué |
+|---|---|
+| `GeekV72_base.set` | Prueba individual con los valores por defecto |
+| `GeekV72_optimizacion.set` | Optimización del motor: Longitud Base, Longitud Vol, Multiplicador Min/Max y Rank mínimo |
+
+Para optimizar, usa el criterio **"Máximo del criterio personalizado"**. Es
+el factor de recuperación (beneficio / drawdown máximo) y descarta las
+combinaciones con menos de 150 trades o que pierden.
 
 ## Diferencias con la versión NinjaTrader
 

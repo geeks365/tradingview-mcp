@@ -1208,3 +1208,18 @@ void OnTradeTransaction(const MqlTradeTransaction &trans, const MqlTradeRequest 
    DrawPanel();
   }
 //+------------------------------------------------------------------+
+
+// Criterio para el optimizador ("Maximo del criterio personalizado").
+// Factor de recuperacion (beneficio / drawdown maximo), pero descarta las
+// combinaciones con pocos trades o que pierden: suelen ser suerte.
+double OnTester()
+  {
+   double trades = TesterStatistics(STAT_TRADES);
+   double profit = TesterStatistics(STAT_PROFIT);
+   double dd     = TesterStatistics(STAT_EQUITY_DD);
+   double pf     = TesterStatistics(STAT_PROFIT_FACTOR);
+   if(trades < 150 || profit <= 0 || dd <= 0 || pf < 1.0)
+      return 0;
+   return profit / dd;
+  }
+//+------------------------------------------------------------------+

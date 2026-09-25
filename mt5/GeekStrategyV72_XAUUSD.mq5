@@ -46,6 +46,13 @@ enum ENUM_GEEK_EXIT
    GEEK_EXIT_VOL   = 2  // Stop = N x MAD del motor
   };
 
+enum ENUM_GEEK_DIR
+  {
+   GEEK_DIR_BOTH  = 0,  // Largos y cortos
+   GEEK_DIR_LONG  = 1,  // Solo largos
+   GEEK_DIR_SHORT = 2   // Solo cortos
+  };
+
 enum ENUM_GEEK_LOTS
   {
    GEEK_LOTS_FIXED = 0, // Lotes fijos
@@ -81,6 +88,9 @@ input double         InpRiskPct      = 0.5;             // Riesgo por trade (% e
 input double         InpFixedLots    = 0.01;            // Lotes fijos
 input double         InpMaxLots      = 1.0;             // Maximo de lotes por trade
 input bool           InpAllowReverse = true;            // Revertir en cada giro
+input ENUM_GEEK_DIR  InpDirection    = GEEK_DIR_BOTH;   // Direccion permitida
+input int            InpConfirmBars  = 0;               // Velas de confirmacion del giro (0 = inmediato)
+input bool           InpCloseOnFlip  = true;            // Cerrar en giro contrario aunque no se pueda revertir
 input int            InpSlippagePts  = 50;              // Desviacion maxima (points)
 
 input group "4. Salidas (en $ de precio del oro)"
@@ -93,7 +103,7 @@ input double         InpStopVolMult    = 2.5;           // Stop = N x Vol (MAD)
 input double         InpRewardRisk     = 2.0;           // Ratio objetivo:riesgo (ATR/Vol)
 input double         InpMinStopUSD     = 3.0;           // Stop minimo ($)
 input double         InpMaxStopUSD     = 35.0;          // Stop maximo ($)
-input bool           InpUseTrail       = true;          // Trailing adaptativo (linea SuperTrend)
+input bool           InpUseTrail       = false;         // Trailing adaptativo (linea SuperTrend)
 input double         InpTrailOffsetUSD = 0.50;          // Holgura del trailing ($)
 input double         InpTrailStartR    = 1.0;           // Activar trailing tras N R de ganancia (0 = desde el inicio)
 
@@ -104,6 +114,9 @@ input int    InpBlockEndHour    = 1;      // Bloqueo hasta (hora)
 input bool   InpFridayClose     = true;   // Cerrar y no entrar el viernes tarde
 input int    InpFridayCloseHour = 22;     // Hora de corte del viernes
 input double InpMaxSpreadUSD    = 0.50;   // Spread maximo para entrar ($)
+input bool   InpUseTradeHours   = false;  // Operar solo en una franja horaria
+input int    InpTradeFromHour   = 13;     // Franja: desde (hora)
+input int    InpTradeToHour     = 9;      // Franja: hasta (hora, sin incluir)
 
 input group "6. Riesgo de cuenta (0 = apagado)"
 input double InpDailyLossPct    = 2.0;    // Perdida diaria max (% equity)
@@ -724,6 +737,13 @@ bool IsBlockedTime(string &why)
                : (dt.hour >= InpBlockStartHour || dt.hour < InpBlockEndHour);
       if(b) { why = "ROLLOVER"; return true; }
      }
+   if(InpUseTradeHours && InpTradeFromHour != InpTradeToHour)
+     {
+      bool inside = InpTradeFromHour < InpTradeToHour
+                ? (dt.hour >= InpTradeFromHour && dt.hour < InpTradeToHour)
+                : (dt.hour >= InpTradeFromHour || dt.hour < InpTradeToHour);
+      if(!inside) { why = "FUERA DE FRANJA"; return true; }
+     }
    why = "OK";
    return false;
   }
@@ -775,6 +795,17 @@ void EvaluateRisk()
       CloseAllMine("RIESGO");
   }
 
+// Giro confirmado en la vela k: la tendencia lleva InpConfirmBars+1 velas
+// seguidas en 'dir' y justo antes estaba en la contraria.
+bool SignalAt(int k, int dir)
+  {
+   int c = MathMax(0, InpConfirmBars);
+   if(k - c - 1 < g_minBars) return false;
+   for(int j = 0; j <= c; j++)
+      if(g_trend[k - j] != dir) return false;
+   return g_trend[k - c - 1] == -dir;
+  }
+
 //+------------------------------------------------------------------+
 //| Logica por vela cerrada                                          |
 //+------------------------------------------------------------------+
@@ -783,10 +814,8 @@ void OnNewClosedBar()
    int k = g_n - 1;
    if(k - 1 < g_minBars || g_trend[k - 1] == 0) return;
 
-   int  curTrend  = g_trend[k];
-   int  prevTrend = g_trend[k - 1];
-   bool flipUp    = curTrend ==  1 && prevTrend == -1;
-   bool flipDown  = curTrend == -1 && prevTrend ==  1;
+   bool flipUp   = SignalAt(k,  1);
+   bool flipDown = SignalAt(k, -1);
 
    // --- estado del trade real
    ulong ticket;
@@ -817,6 +846,8 @@ void OnNewClosedBar()
       longOk  = d ==  1;
       shortOk = d == -1;
      }
+   if(InpDirection == GEEK_DIR_SHORT) longOk  = false;
+   if(InpDirection == GEEK_DIR_LONG)  shortOk = false;
    string why;
    bool windowOk = !IsBlockedTime(why) && (InpMaxSpreadUSD <= 0 || Spread() <= InpMaxSpreadUSD);
 
@@ -856,7 +887,7 @@ void OnNewClosedBar()
                CloseAllMine("FLIP");
                if(windowOk) OpenTrade(true);
               }
-            else if(canEnter || InpUseHTF)
+            else if(InpCloseOnFlip && (canEnter || InpUseHTF || InpDirection != GEEK_DIR_BOTH))
                CloseAllMine("FLIP");
            }
         }
@@ -871,7 +902,7 @@ void OnNewClosedBar()
                CloseAllMine("FLIP");
                if(windowOk) OpenTrade(false);
               }
-            else if(canEnter || InpUseHTF)
+            else if(InpCloseOnFlip && (canEnter || InpUseHTF || InpDirection != GEEK_DIR_BOTH))
                CloseAllMine("FLIP");
            }
         }

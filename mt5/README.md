@@ -35,7 +35,7 @@ cotización). Así funciona igual con brokers de 2 y de 3 decimales.
 | HTF | **ON**, H1 EMA 50 | | Solo opera a favor de la tendencia de H1. |
 | Salidas | **ATR(14) × 1.8**, R:R **2.0** | | Los 25/75 ticks del futuro GC equivalen a $2.5/$7.5, demasiado cerca para el ruido del XAUUSD en M15 (el ATR suele estar entre $4 y $10). |
 | Salidas | Stop mín **$3**, máx **$35** | | Acota el stop en velas de noticias (NFP, CPI, FOMC). |
-| Trailing | **ON**, holgura **$0.50** | | Deja correr las tendencias largas del oro con la propia línea del motor. |
+| Trailing | **OFF** | | En el backtest 2024-2026 el trailing no mejoró el resultado (FB 1.07 sin trailing frente a 1.05 con él). |
 | Tamaño | **0.5 % del equity** por trade, máx 1.0 lote | | |
 | Riesgo | Pérdida diaria máx **2 %** | | Al llegar, cierra y no vuelve a operar hasta el día siguiente. |
 | Horario | Sin entradas de 23:00 a 01:00 (servidor) | | El spread del oro se dispara en el rollover diario. |
@@ -76,6 +76,24 @@ para que cubran la pausa diaria del oro.
 
 Si un valor solo es bueno en un punto exacto y los vecinos pierden, no lo uses:
 elige una zona estable.
+
+## Opciones nuevas (tras el primer backtest)
+
+Por defecto vienen neutras: con los valores de fábrica el EA se comporta como antes, salvo el trailing, que ahora viene apagado.
+
+| Parámetro | Por defecto | Qué hace |
+|---|---|---|
+| Direccion permitida | Largos y cortos | Solo largos / solo cortos |
+| Velas de confirmacion del giro | 0 | El giro tiene que mantenerse N velas más antes de entrar. Reduce los whipsaws, pero entra más tarde |
+| Cerrar en giro contrario aunque no se pueda revertir | true | false = si llega un giro contrario que no puede revertir, deja que el SL/TP cierre el trade |
+| Operar solo en una franja horaria | false | Solo abre trades entre `desde` y `hasta` (hora del servidor; admite cruzar la medianoche) |
+| Activar trailing tras N R de ganancia | 1.0 | Si enciendes el trailing, espera a que el trade lleve N R a favor |
+
+## Optimización con el archivo .set
+
+`GeekV72_optimizacion.set` trae ya marcados los parámetros del motor para optimizar
+(Multiplicador Min/Max, Longitud Vol, Rank mínimo y Velas de confirmación).
+En el Probador: pestaña *Parámetros* → clic derecho → **Cargar** → elige el `.set`.
 
 ## Diferencias con la versión NinjaTrader
 

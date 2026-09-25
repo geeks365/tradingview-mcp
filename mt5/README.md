@@ -29,9 +29,9 @@ cotización). Así funciona igual con brokers de 2 y de 3 decimales.
 | Grupo | Parámetro | Valor | Por qué |
 |---|---|---|---|
 | Marco | Timeframe | **M15** | Con el motor 34/5, M5 da demasiados giros en el oro y H1 demasiado pocos. |
-| Motor | ALMA 34 / 0.65 / 20, EMA 4 | igual que el original | El motor no se tocó, para que las señales coincidan con las de NinjaTrader y el Pine. |
-| Motor | MAD 5 / EMA 5, Mult 0.8–1.8, rank 100 | igual que el original | |
-| Régimen | Filtro de vol **ON**, rank mínimo **0.20** | | El oro pasa mucho tiempo lateral en Asia; ahí un SuperTrend pierde por whipsaw. |
+| Motor | ALMA **48** / 0.65 / 20, EMA 4 | optimizado | El original usa 34. Con 48 la base es más lenta y gira menos (optimización con forward 1/3 y validación con ticks reales). |
+| Motor | MAD 5 / EMA 5, Mult **1.7–1.8**, rank 100 | optimizado | El original usa 0.8–1.8. Bandas más anchas = menos giros falsos. |
+| Régimen | Filtro de vol **ON**, rank mínimo **0.40** | optimizado | No entra en el 40 % de velas más tranquilas del lookback. |
 | HTF | **ON**, H1 EMA 50 | | Solo opera a favor de la tendencia de H1. |
 | Salidas | **ATR(14) × 1.8**, R:R **2.0** | | Los 25/75 ticks del futuro GC equivalen a $2.5/$7.5, demasiado cerca para el ruido del XAUUSD en M15 (el ATR suele estar entre $4 y $10). |
 | Salidas | Stop mín **$3**, máx **$35** | | Acota el stop en velas de noticias (NFP, CPI, FOMC). |

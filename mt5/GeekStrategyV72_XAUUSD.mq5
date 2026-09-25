@@ -67,7 +67,7 @@ input long            InpMagic           = 720072;      // Numero magico
 input int             InpHistoryBars     = 3000;        // Velas de historial para el motor
 
 input group "1. Base (ALMA)"
-input int    InpBasisLen        = 34;     // Longitud Base (ALMA)
+input int    InpBasisLen        = 48;     // Longitud Base (ALMA)
 input double InpAlmaOffset      = 0.65;   // ALMA Offset
 input double InpAlmaSigma       = 20.0;   // ALMA Sigma
 input int    InpBasisSmooth     = 4;      // Suavizado Base (EMA)
@@ -75,11 +75,11 @@ input int    InpBasisSmooth     = 4;      // Suavizado Base (EMA)
 input group "2. Volatilidad (MAD)"
 input int    InpVolLen          = 5;      // Longitud Vol (MAD)
 input int    InpVolSmooth       = 5;      // Suavizado Vol (EMA)
-input double InpMinMult         = 0.8;    // Multiplicador Min
+input double InpMinMult         = 1.7;    // Multiplicador Min
 input double InpMaxMult         = 1.8;    // Multiplicador Max
 input int    InpVolRankLookback = 100;    // Lookback Rank Vol
 input bool   InpUseVolRegime    = true;   // Filtrar por regimen de vol (no operar lateral)
-input double InpMinVolRank      = 0.20;   // Rank minimo de vol (0-1)
+input double InpMinVolRank      = 0.40;   // Rank minimo de vol (0-1)
 
 input group "3. Ejecucion"
 input ENUM_GEEK_MODE InpMode         = GEEK_FULLAUTO;   // Modo de ejecucion

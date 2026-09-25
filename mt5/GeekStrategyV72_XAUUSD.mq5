@@ -95,6 +95,7 @@ input double         InpMinStopUSD     = 3.0;           // Stop minimo ($)
 input double         InpMaxStopUSD     = 35.0;          // Stop maximo ($)
 input bool           InpUseTrail       = true;          // Trailing adaptativo (linea SuperTrend)
 input double         InpTrailOffsetUSD = 0.50;          // Holgura del trailing ($)
+input double         InpTrailStartR    = 1.0;           // Activar trailing tras N R de ganancia (0 = desde el inicio)
 
 input group "5. Horario y spread (hora del servidor)"
 input bool   InpBlockRollover   = true;   // Bloquear entradas en el rollover diario
@@ -168,6 +169,7 @@ int      g_armBarsLeft = 0;
 
 // trade en curso (real en FullAuto, virtual en SemiAuto)
 bool     g_tradeActive = false, g_tradeLong = false;
+bool     g_trailOn = false;     // el trailing ya se activo en este trade
 double   g_tradeEntry = 0, g_tradeTp = 0, g_tradeSl = 0, g_tradeSlInit = 0, g_tradeLots = 0;
 datetime g_tradeTime = 0;
 long     g_tradePosId = 0;
@@ -559,6 +561,7 @@ void SetTradeMarks(bool isLong, double entry, double slPx, double tpPx, double l
    g_tradeActive = true;
    g_tradeResult = "";
    g_closeReason = "";
+   g_trailOn     = false;
   }
 
 bool OpenTrade(bool isLong)
@@ -611,6 +614,16 @@ void UpdateAdaptiveTrail(double engineStop)
      {
       refPx = g_close[g_n - 1];
       gap   = TickSize();
+     }
+
+   // El trailing espera a que el trade vaya InpTrailStartR a favor. Asi el
+   // stop inicial por ATR tiene tiempo de trabajar antes de apretarse.
+   if(!g_trailOn)
+     {
+      double riskD = MathAbs(g_tradeEntry - g_tradeSlInit);
+      double runR  = riskD > 0 ? (g_tradeLong ? refPx - g_tradeEntry : g_tradeEntry - refPx) / riskD : 0;
+      if(runR < InpTrailStartR) return;
+      g_trailOn = true;
      }
 
    double cand = g_tradeLong ? engineStop - InpTrailOffsetUSD : engineStop + InpTrailOffsetUSD;

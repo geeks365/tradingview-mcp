@@ -40,7 +40,7 @@ cotización). Así funciona igual con brokers de 2 y de 3 decimales.
 | Riesgo | Pérdida diaria máx **2 %** | | Al llegar, cierra y no vuelve a operar hasta el día siguiente. |
 | Horario | Sin entradas de 23:00 a 01:00 (servidor) | | El spread del oro se dispara en el rollover diario. |
 | Horario | Cierre el viernes a las 22:00 (servidor) | | Evita el gap del fin de semana. |
-| Spread | Máx **$0.50** | | Si el spread es mayor, no entra. |
+| Spread | Máx **$1.00** | | Si el spread es mayor, no entra. Con el oro sobre $4,000 el spread de OANDA pasa de $0.50 con frecuencia. |
 | Modo | **FullAuto** | | Pon `SemiAuto` si solo quieres señales y alertas. |
 
 > **Aviso:** no pude optimizar estos valores con datos reales: el entorno donde

@@ -188,6 +188,7 @@ datetime g_tradeTime = 0;
 long     g_tradePosId = 0;
 string   g_tradeResult = "";
 string   g_closeReason = "";
+string   g_lastSignal  = "";   // ultima senal y si entro o por que no (panel)
 
 // panel
 int      g_panelLines = 0;
@@ -588,14 +589,22 @@ bool OpenTrade(bool isLong)
    double slPx  = NormPrice(isLong ? price - sl : price + sl);
    double tpPx  = NormPrice(isLong ? price + tp : price - tp);
    double lots  = CalcLots(sl, isLong, price);
-   if(lots <= 0) { Print("GeekV72: volumen 0 (margen o lote minimo). Entrada omitida."); return false; }
+   if(lots <= 0)
+     {
+      Print("GeekV72: volumen 0 (margen o lote minimo). Entrada omitida.");
+      g_lastSignal += " / FALLO: volumen 0 (margen)";
+      return false;
+     }
 
    bool ok = isLong ? trade.Buy(lots, _Symbol, 0, slPx, tpPx, "GeekLong")
                     : trade.Sell(lots, _Symbol, 0, slPx, tpPx, "GeekShort");
    uint rc = trade.ResultRetcode();
    if(!ok || (rc != TRADE_RETCODE_DONE && rc != TRADE_RETCODE_PLACED && rc != TRADE_RETCODE_DONE_PARTIAL))
      {
-      PrintFormat("GeekV72: fallo la entrada %s: %u %s", isLong ? "LONG" : "SHORT", rc, trade.ResultRetcodeDescription());
+      string err = StringFormat("GeekV72: fallo la entrada %s: %u %s", isLong ? "LONG" : "SHORT", rc, trade.ResultRetcodeDescription());
+      Print(err);
+      Notify(err, "");
+      g_lastSignal += " / FALLO: " + trade.ResultRetcodeDescription();
       return false;
      }
 
@@ -806,6 +815,34 @@ bool SignalAt(int k, int dir)
    return g_trend[k - c - 1] == -dir;
   }
 
+// Boton Algo Trading del terminal + casilla "Allow Algo Trading" del EA + cuenta.
+bool TradingAllowed()
+  {
+   return TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED)
+          && AccountInfoInteger(ACCOUNT_TRADE_EXPERT) && AccountInfoInteger(ACCOUNT_TRADE_ALLOWED);
+  }
+
+// Motivo por el que una senal no abre trade ("" = entra).
+string SkipReason(bool isLong, bool dirOk, bool canEnter, double rank, string timeWhy, int posDir)
+  {
+   if(posDir == (isLong ? 1 : -1)) return "ya hay posicion en esa direccion";
+   if(posDir != 0 && !InpAllowReverse) return "posicion abierta y reversion desactivada";
+   if(g_dayHalted || g_hardHalted) return "limite de riesgo alcanzado";
+   if(!canEnter && InpUseVolRegime && rank < InpMinVolRank)
+      return "volatilidad baja (rank " + DoubleToString(rank * 100, 0) + "% < " + DoubleToString(InpMinVolRank * 100, 0) + "%)";
+   if(!dirOk)
+     {
+      if(InpDirection == GEEK_DIR_LONG && !isLong)  return "solo largos";
+      if(InpDirection == GEEK_DIR_SHORT && isLong)  return "solo cortos";
+      if(InpUseHTF) return "tendencia " + TfName(InpHTF) + " en contra";
+     }
+   if(timeWhy != "OK") return "horario (" + timeWhy + ")";
+   if(InpMaxSpreadUSD > 0 && Spread() > InpMaxSpreadUSD)
+      return "spread " + DoubleToString(Spread(), 2) + " > " + DoubleToString(InpMaxSpreadUSD, 2);
+   if(InpMode == GEEK_FULLAUTO && !TradingAllowed()) return "trading algoritmico DESACTIVADO en MT5";
+   return "";
+  }
+
 //+------------------------------------------------------------------+
 //| Logica por vela cerrada                                          |
 //+------------------------------------------------------------------+
@@ -860,15 +897,24 @@ void OnNewClosedBar()
       g_pendingTp = ComputeTargetDist(g_pendingSl);
      }
 
+   if(flipUp || flipDown)
+     {
+      bool   up  = flipUp;
+      string res = SkipReason(up, up ? longOk : shortOk, canEnter, g_rank[k], why, posDir);
+      string msg = "Geek XAUUSD: senal " + (up ? "BUY" : "SELL") + (res == "" ? " -> ENTRA" : " -> NO ENTRA: " + res);
+      g_lastSignal = TimeToString(g_time[k] + PeriodSeconds(g_tf), TIME_DATE | TIME_MINUTES) + " " + (up ? "BUY" : "SELL")
+                     + (res == "" ? " entra" : ": " + res);
+      Print(msg);
+      if(InpSoundAlerts) Notify(msg, up ? InpBuySound : InpSellSound);
+     }
+
    if(flipUp)
      {
-      if(InpSoundAlerts) Notify("Geek XAUUSD: senal BUY", InpBuySound);
       if(canLong && windowOk && (posDir == 0 || (posDir == -1 && InpAllowReverse)))
          ArmEntry(true);
      }
    else if(flipDown)
      {
-      if(InpSoundAlerts) Notify("Geek XAUUSD: senal SELL", InpSellSound);
       if(canShort && windowOk && (posDir == 0 || (posDir == 1 && InpAllowReverse)))
          ArmEntry(false);
      }
@@ -942,6 +988,10 @@ void DrawPanel()
    IsBlockedTime(why);
    AddLine(L, "Horario   : " + why + "   Spread " + DoubleToString(Spread(), 2));
    AddLine(L, "P&L dia   : " + Money(AccountInfoDouble(ACCOUNT_EQUITY) - g_dayStartEq));
+   if(InpMode == GEEK_FULLAUTO && !TradingAllowed())
+      AddLine(L, "!! ALGO TRADING DESACTIVADO: no puede operar !!");
+   if(g_lastSignal != "")
+      AddLine(L, "Ult senal : " + g_lastSignal);
    if(g_dayHalted || g_hardHalted)
       AddLine(L, "RIESGO    : DETENIDA");
    AddLine(L, "------------------------------------");
